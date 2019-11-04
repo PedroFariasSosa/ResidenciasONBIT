@@ -1,0 +1,9 @@
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\bin\Debug\PruebaEPAS.exe.config
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\bin\Debug\PruebaEPAS.exe
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\bin\Debug\PruebaEPAS.pdb
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.csprojAssemblyReference.cache
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.Form1.resources
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.Properties.Resources.resources
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.csproj.GenerateResource.cache
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.exe
+C:\Users\Surey\source\repos\PruebaEPAS\PruebaEPAS\obj\Debug\PruebaEPAS.pdb
