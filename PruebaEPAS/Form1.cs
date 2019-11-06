@@ -30,7 +30,7 @@ namespace PruebaEPAS
         /// </summary>
         /// <param name="dt">DataTable a consultar</param>
         /// <returns>Un booleano indicando true cuando es en incrimento, de lo contrario false.</returns>
-        private bool VerificarEnIncremento(DataTable dt, CarroCompra carrocompraEntrante)
+        private bool VerificarEnIncremento(DataTable dt, CarroCompra carroCompraEntrante)
         {
             bool resultado;
             float monto;
@@ -61,7 +61,7 @@ namespace PruebaEPAS
         /// </summary>
         /// <param name="dt">DataTable a consultar</param>
         /// <returns>Un booleano indicando false cuando es en decremento, de lo contrario true.</returns>
-        private bool VerificarEnDecremento(DataTable dt, CarroCompra carrocompraEntrante)
+        private bool VerificarEnDecremento(DataTable dt, CarroCompra carroCompraEntrante)
         {
             bool resultado = false;
 
@@ -82,7 +82,7 @@ namespace PruebaEPAS
                 {
                     if (dt.Rows.Count > 0)
                     {
-                        if (dt.Rows[0].Field<float>("MontoTotal") >= carrocompraEntrante.Carrocomprapago.Montototal)
+                        if (dt.Rows[0].Field<float>("MontoTotal") >= carroCompraEntrante.Carrocomprapago.Montototal)
                         {
                             esmontomenor = true;
                         }
@@ -111,6 +111,72 @@ namespace PruebaEPAS
             return resultado;
         }
 
+        private bool VerificarEPA3(DataTable dt, CarroCompra carroCompraEntrante)
+        {
+            bool resultado = false;
+            
+
+            try
+            {
+                bool intentos = false;
+
+                if (dt == null)
+                {
+                    intentos = false;
+                }
+                else
+                {
+                    foreach (DataRow fila in dt.Rows)
+                    {
+
+                        if (fila.Field<int>("CodigoRespuesta") != (int)CodigoRespuesta.TarjetaDeclinadaPorCVV)
+                        {
+                            intentos = false;
+                        }
+                    }
+                }
+                
+            }
+            catch (Exception ex)
+            {
+
+                MessageBox.Show(ex.Message);
+
+            }
+
+            return resultado;
+        }
+        private bool VerificarEPA4(DataTable dt, CarroCompra carroCompraEntrante)
+        {
+            bool resultado = false;
+
+            try
+            {
+                bool hayrechazados = true;
+                
+
+                if (dt == null)
+                {
+                    hayrechazados = false;
+                }
+                else
+                {
+                    foreach (DataRow fila in dt.Rows)
+                    {
+
+                        if (fila.Field<int>("Estatus") == (int)Estatus.Aceptado)
+                        {
+                            hayrechazados = false;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("No se encontro la variable en el archivo de configuración");
+            }
+            return resultado;
+        }
         private bool EPA1(CarroCompra carroCompraEntrante)
         {
             bool resultado;
@@ -157,7 +223,7 @@ namespace PruebaEPAS
 
                 //Aquí ejecuto el SP y lo lleno en el DataTable
                 adapter.Fill(dt);
-                resultado = VerificarEnDecremento(dt, carroCompraEntrante);
+                resultado = VerificarEnIncremento(dt, carroCompraEntrante);
             }
             catch (Exception ex)
             {
@@ -277,7 +343,7 @@ namespace PruebaEPAS
 
                 //Aquí ejecuto el SP y lo lleno en el DataTable
                 adapter.Fill(dt);
-                resultado = VerificarEnDecremento(dt, carroCompraEntrante);
+                resultado = VerificarEPA3(dt, carroCompraEntrante);
 
                 dataGridView1.DataSource = dt;
 
@@ -287,8 +353,73 @@ namespace PruebaEPAS
 
                 throw;
             }
+            finally
+            {
+                conn.Close();
+            }
             return resultado;
 
+        }
+
+        private bool EPA4(CarroCompra carroCompraEntrante)
+        {
+            bool resultado;
+            resultado = false;
+
+            try
+            {
+                SqlCommand command = new SqlCommand("EPA4", conn);
+                command.CommandType = CommandType.StoredProcedure;
+
+                SqlDataAdapter adapter3 = new SqlDataAdapter(command);
+
+                //Envió los parámetros que necesito para el EPA4
+                SqlParameter param01 = new SqlParameter("@userID", SqlDbType.Int);
+                param01.Value = carroCompraEntrante.Cliente.Id;
+                command.Parameters.Add(param01);
+
+                SqlParameter param02 = new SqlParameter("FechaTransaccion", SqlDbType.DateTimeOffset);
+                param02.Value = carroCompraEntrante.Carrocomprapago.FechaUTCtransaccion;
+                command.Parameters.Add(param02);
+
+                SqlParameter param03 = new SqlParameter("@tarjetaPAN", SqlDbType.VarChar, 19);
+                param03.Value = carroCompraEntrante.Carrocomprapago.Tarjetapan;
+                command.Parameters.Add(param03);
+
+                String EPA4TiempoDeVentana;
+                EPA4TiempoDeVentana = ConfigurationManager.AppSettings.Get("EPA4TiempoDeVentana");
+
+                int EPA4NumTransaccionesMin;
+                EPA4NumTransaccionesMin = Int32.Parse(ConfigurationManager.AppSettings.Get("EPA4NumTransaccionesMin"));
+
+                SqlParameter param04 = new SqlParameter("@Tiempo", SqlDbType.Int);
+                param04.Value = Int32.Parse(EPA4TiempoDeVentana);
+                command.Parameters.Add(param04);
+
+                SqlParameter param05 = new SqlParameter("@NumRegistros", SqlDbType.Int);
+                param05.Value = EPA4NumTransaccionesMin;
+                command.Parameters.Add(param05);
+
+                DataTable dt = new DataTable();
+
+                conn.Open();
+
+                //Aquí ejecuto el SP y lo lleno en el DataTable
+                adapter3.Fill(dt);
+                resultado = VerificarEPA4(dt, carroCompraEntrante);
+
+                dataGridView1.DataSource = dt;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                throw;
+            }
+            finally
+            {
+                conn.Close();
+            }
+            return resultado;
         }
 
         private void Llenar_Grid()
@@ -308,13 +439,6 @@ namespace PruebaEPAS
                 command.CommandType = CommandType.StoredProcedure;
 
                 SqlDataAdapter adapter = new SqlDataAdapter(command);
-                
-                //Indico el SP Epa2 
-                SqlCommand command1 = new SqlCommand("EPA2", conn);
-                command1.CommandType = CommandType.StoredProcedure;
-
-                SqlDataAdapter adapter1 = new SqlDataAdapter(command1);
-                
                 //Envió los parámetros que necesitopara el EPA1
                 SqlParameter param1 = new SqlParameter("@userID", SqlDbType.Int);
                 param1.Value = 00003;
@@ -341,7 +465,12 @@ namespace PruebaEPAS
                 SqlParameter param5 = new SqlParameter("@NumRegistros", SqlDbType.Int);
                 param5.Value = EPA1NumTransaccionesMin;
                 command.Parameters.Add(param5);
-                
+
+                //Indico el SP Epa2 
+                SqlCommand command1 = new SqlCommand("EPA2", conn);
+                command1.CommandType = CommandType.StoredProcedure;
+
+                SqlDataAdapter adapter1 = new SqlDataAdapter(command1);
                 //Envió los parámetros que necesito para el EPA2
                 SqlParameter param01 = new SqlParameter("@userID", SqlDbType.Int);
                 param01.Value = 00002;
@@ -368,6 +497,72 @@ namespace PruebaEPAS
                 SqlParameter param05 = new SqlParameter("@NumRegistros", SqlDbType.Int);
                 param05.Value = EPA2NumTransaccionesMin;
                 command1.Parameters.Add(param05);
+                
+                //Indico el SP Epa3 
+                SqlCommand command2 = new SqlCommand("EPA3", conn);
+                command2.CommandType = CommandType.StoredProcedure;
+
+                SqlDataAdapter adapter2 = new SqlDataAdapter(command2);
+
+                //Envió los parámetros que necesito para el EPA3
+                SqlParameter param001 = new SqlParameter("@userID", SqlDbType.Int);
+                param001.Value = 00002;
+                command1.Parameters.Add(param001);
+
+                SqlParameter param002 = new SqlParameter("FechaTransaccion", SqlDbType.DateTimeOffset);
+                param002.Value = DateTimeOffset.Parse("2019-10-21 10:40:00-5");
+                command1.Parameters.Add(param002);
+
+                SqlParameter param003 = new SqlParameter("@tarjetaPAN", SqlDbType.VarChar, 19);
+                param003.Value = "5474846151371020";
+                command1.Parameters.Add(param003);
+
+                String EPA3TiempoDeVentana;
+                EPA3TiempoDeVentana = ConfigurationManager.AppSettings.Get("EPA3TiempoDeVentana");
+
+                int EPA3NumTransaccionesMin;
+                EPA3NumTransaccionesMin = Int32.Parse(ConfigurationManager.AppSettings.Get("EPA3NumTransaccionesMin"));
+
+                SqlParameter param004 = new SqlParameter("@Tiempo", SqlDbType.Int);
+                param004.Value = Int32.Parse(EPA3TiempoDeVentana);
+                command1.Parameters.Add(param004);
+
+                SqlParameter param005 = new SqlParameter("@NumRegistros", SqlDbType.Int);
+                param005.Value = EPA3NumTransaccionesMin;
+                command1.Parameters.Add(param005);
+             
+                //Indico el SP Epa4 
+                SqlCommand command3 = new SqlCommand("EPA4", conn);
+                command3.CommandType = CommandType.StoredProcedure;
+
+                SqlDataAdapter adapter3 = new SqlDataAdapter(command3);
+
+                //Envió los parámetros que necesito para el EPA4
+                SqlParameter param0001 = new SqlParameter("@userID", SqlDbType.Int);
+                param0001.Value = 00002;
+                command3.Parameters.Add(param0001);
+
+                SqlParameter param0002 = new SqlParameter("FechaTransaccion", SqlDbType.DateTimeOffset);
+                param0002.Value = DateTimeOffset.Parse("2019-10-21 10:40:00-5");
+                command3.Parameters.Add(param0002);
+
+                SqlParameter param0003 = new SqlParameter("@tarjetaPAN", SqlDbType.VarChar, 19);
+                param0003.Value = "5474846151371020";
+                command3.Parameters.Add(param0003);
+
+                String EPA4TiempoDeVentana;
+                EPA4TiempoDeVentana = ConfigurationManager.AppSettings.Get("EPA4TiempoDeVentana");
+
+                int EPA4NumTransaccionesMin;
+                EPA4NumTransaccionesMin = Int32.Parse(ConfigurationManager.AppSettings.Get("EPA4NumTransaccionesMin"));
+
+                SqlParameter param0004 = new SqlParameter("@Tiempo", SqlDbType.Int);
+                param0004.Value = Int32.Parse(EPA4TiempoDeVentana);
+                command3.Parameters.Add(param0004);
+
+                SqlParameter param0005 = new SqlParameter("@NumRegistros", SqlDbType.Int);
+                param0005.Value = EPA4NumTransaccionesMin;
+                command3.Parameters.Add(param0005);
 
                 DataTable dt = new DataTable();
 
@@ -376,6 +571,8 @@ namespace PruebaEPAS
                 //Aquí ejecuto el SP y lo lleno en el DataTable
                 adapter.Fill(dt);
                 adapter1.Fill(dt);
+                adapter2.Fill(dt);
+                adapter3.Fill(dt);
 
                 //Enlazo mis datos obtenidos en el DataTable con el grid
                 dataGridView1.DataSource = dt;
